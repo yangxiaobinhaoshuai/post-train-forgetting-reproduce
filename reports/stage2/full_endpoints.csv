@@ -1,0 +1,3 @@
+run,step,status,ag_test,gsm_test,mmlu_test,gsm_news_label_rate,mmlu_letter_probability_mass
+full_lr1e4,50,complete,0.8375,0.0,0.25,1.0,1.8513709109046157e-08
+full_lr1e4,200,complete,0.865,0.0,0.25,1.0,2.1879544674752284e-08

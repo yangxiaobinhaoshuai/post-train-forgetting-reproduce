@@ -1,0 +1,191 @@
+{
+  "status": "implemented",
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "seed": 42,
+  "references": {
+    "base": "artifacts/base",
+    "collapsed": "artifacts/stage1/checkpoint-50",
+    "stage1_data_manifest": "data/stage1/manifest.json",
+    "source_model_sha256": "dd924a11b4c220f385b51ffa522daea7c9f3d850e31b162bb5661df483c6d3ee"
+  },
+  "common_training": {
+    "micro_batch_size": 2,
+    "gradient_accumulation_steps": 8,
+    "effective_batch_size": 16,
+    "weight_decay": 0.01,
+    "max_grad_norm": 1.0,
+    "optimizer": "adamw_torch",
+    "parameter_dtype": "bfloat16",
+    "gradient_checkpointing": true,
+    "loss": "assistant_only",
+    "lr_scheduler": "constant_with_warmup"
+  },
+  "sensitivity": {
+    "train_data": "data/stage1/train.json",
+    "max_steps": 200,
+    "max_length": 512,
+    "warmup_steps": 30,
+    "quick_eval_steps": [
+      0,
+      1,
+      5,
+      10,
+      20,
+      30,
+      50,
+      100,
+      200
+    ],
+    "full_eval_steps": [
+      50,
+      200
+    ],
+    "runs": [
+      {
+        "id": "full_lr1e4",
+        "method": "full",
+        "learning_rate": 0.0001
+      },
+      {
+        "id": "lora_lr1e4",
+        "method": "lora",
+        "learning_rate": 0.0001
+      },
+      {
+        "id": "full_lr2e5",
+        "method": "full",
+        "learning_rate": 2e-05
+      }
+    ],
+    "lora": {
+      "r": 16,
+      "alpha": 32,
+      "dropout": 0.05,
+      "target_modules": [
+        "q_proj",
+        "k_proj",
+        "v_proj",
+        "o_proj",
+        "gate_proj",
+        "up_proj",
+        "down_proj"
+      ],
+      "bias": "none",
+      "modules_to_save": null,
+      "train_embeddings": false,
+      "train_lm_head": false
+    }
+  },
+  "recovery": {
+    "source_dataset": "openai/gsm8k",
+    "source_subset": "main",
+    "source_split": "train",
+    "train_pool_size": 512,
+    "dev_size": 128,
+    "nested_train_sizes": [
+      32,
+      128,
+      512
+    ],
+    "max_steps": 32,
+    "max_length": 1024,
+    "learning_rate": 2e-05,
+    "warmup_steps": 0,
+    "quick_eval_steps": [
+      0,
+      1,
+      4,
+      8,
+      16,
+      32
+    ],
+    "full_eval_steps": [
+      32
+    ],
+    "runs": [
+      {
+        "id": "recover32",
+        "start": "collapsed",
+        "data": "gsm_gold",
+        "train_size": 32
+      },
+      {
+        "id": "recover128",
+        "start": "collapsed",
+        "data": "gsm_gold",
+        "train_size": 128
+      },
+      {
+        "id": "recover512",
+        "start": "collapsed",
+        "data": "gsm_gold",
+        "train_size": 512
+      },
+      {
+        "id": "base_math512",
+        "start": "base",
+        "data": "gsm_gold",
+        "train_size": 512
+      },
+      {
+        "id": "continue_ag",
+        "start": "collapsed",
+        "data": "stage1_ag",
+        "train_size": 8000
+      }
+    ]
+  },
+  "evaluation": {
+    "backend": "lm-evaluation-harness HFLM",
+    "max_context_length": 2048,
+    "gsm_max_new_tokens": 512,
+    "open_max_new_tokens": 256,
+    "ag_max_new_tokens": 16,
+    "quick": {
+      "gsm": 20,
+      "ag": 80,
+      "mmlu": 60,
+      "open": 10
+    },
+    "full": {
+      "gsm": 200,
+      "ag": 400,
+      "mmlu": 300,
+      "open": 10
+    },
+    "quick_ag_per_class": 20,
+    "quick_mmlu_per_subject": 10,
+    "decode": "greedy",
+    "likelihood_softmax_dtype": "float32",
+    "primary_prompt": "unchanged_stage1",
+    "in_process_batch_size": 1,
+    "standalone_batch_size": 4
+  },
+  "storage": {
+    "preserve_all_stage1_files": true,
+    "in_process_evaluation_reuses_training_model": true,
+    "keep_full_weight_run_endpoints": [
+      "full_lr2e5",
+      "recover512"
+    ],
+    "keep_lora_eval_checkpoints": true,
+    "keep_other_full_checkpoints": false,
+    "persist_all_predictions_metrics_and_configs": true,
+    "minimum_free_gib": 5,
+    "maximum_additional_gib": 8
+  },
+  "optional": {
+    "prompt_rescue": {
+      "steps": [
+        0,
+        50
+      ],
+      "templates": [
+        "original",
+        "explicit_task_override"
+      ],
+      "use_quick_set": true
+    },
+    "dpo_and_grpo": "deferred_until_core_results_reviewed"
+  }
+}

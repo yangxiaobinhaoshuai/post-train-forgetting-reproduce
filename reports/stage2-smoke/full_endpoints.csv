@@ -1,0 +1,9 @@
+run,step,status,ag_test,gsm_test,mmlu_test,gsm_news_label_rate,mmlu_letter_probability_mass
+full_lr1e4,2,complete,0.5,0.0,0.5,0.0,0.18571497831891898
+lora_lr1e4,2,complete,0.5,0.0,0.5,0.0,0.17882180618449925
+full_lr2e5,2,complete,0.5,0.0,0.5,0.0,0.18107585513545704
+recover32,2,complete,0.5,0.0,0.0,0.5,6.157569360537633e-07
+recover128,2,complete,0.5,0.0,0.0,0.5,6.157569360537633e-07
+recover512,2,complete,0.5,0.0,0.0,0.5,6.157569360537633e-07
+base_math512,2,complete,0.5,0.0,0.0,0.0,0.06817772780797243
+continue_ag,2,complete,1.0,0.0,0.0,1.0,7.400994357681842e-08

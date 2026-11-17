@@ -6,3 +6,4 @@ lm_eval==0.4.9
 matplotlib==3.10.7
 modelscope==1.40.3
 socksio>=1.0.0
+peft==0.21.3
