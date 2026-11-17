@@ -1,0 +1,10 @@
+{
+  "random_weights": true,
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "parameters": 1543714304,
+  "optimizer_steps": 1,
+  "train_seconds": 3.7551606502383947,
+  "peak_allocated_gib": 14.396721363067627,
+  "loss": 12.457178115844727,
+  "harness_generation_and_likelihood_ok": true
+}
