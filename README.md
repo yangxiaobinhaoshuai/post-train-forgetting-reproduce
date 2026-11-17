@@ -8,13 +8,13 @@
 - [后续研究框架](docs/PROPOSAL.md)
 
 ```bash
-python -m pip install -r requirements.txt
-python scripts/prepare.py
-python scripts/train.py --smoke
-python scripts/eval_checkpoint.py --steps 0 --smoke
-bash scripts/run_stage1.sh
+uv sync
+uv run python scripts/prepare.py
+uv run python scripts/train.py --smoke
+uv run python scripts/eval_checkpoint.py --steps 0 --smoke
+uv run bash scripts/run_stage1.sh
 ```
 
 评测使用 lm-evaluation-harness HFLM：GSM8K 200 题、AG News 400 条生成；MMLU 六科约 300 题 log-likelihood；10 条开放问题保留原文。结果及曲线由脚本生成，不预填实验结果。
 
-当前验证：依赖安装、3 项检查、1.5B 随机权重完整训练步和 harness 两类接口已通过（峰值约 14.4GiB）；真实权重下载/数据准备未完成，正式实验未启动。
+模型从 ModelScope 下载至 `artifacts/base`；数据集仍从 Hugging Face 获取。依赖由 `pyproject.toml` 与 `uv.lock` 管理。

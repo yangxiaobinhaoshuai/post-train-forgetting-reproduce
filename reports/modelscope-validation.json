@@ -1,0 +1,11 @@
+{
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "source": "modelscope",
+  "torch": "2.8.0+cu128",
+  "cuda": "12.8",
+  "gpu": "NVIDIA GeForce RTX 4090",
+  "load_and_generate_seconds": 2.225893476046622,
+  "prompt": "What is 2 + 3? Reply with the number only.",
+  "output": "5",
+  "peak_allocated_gib": 2.888000011444092
+}

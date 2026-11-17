@@ -28,14 +28,14 @@
 在项目根目录：
 
 ```bash
-python -m pip install -r requirements.txt
-python scripts/prepare.py
-python scripts/train.py --smoke
-python scripts/eval_checkpoint.py --steps 0 --smoke
-bash scripts/run_stage1.sh
+uv sync
+uv run python scripts/prepare.py
+uv run python scripts/train.py --smoke
+uv run python scripts/eval_checkpoint.py --steps 0 --smoke
+uv run bash scripts/run_stage1.sh
 ```
 
-smoke 为独立两步训练和每类两条短输出评测，不覆盖正式结果。完整入口先评测 0 步，再训练、逐 checkpoint 评测、生成曲线；训练与评测分进程，避免同时占显存。若准备已完成会复用，已完成评测会跳过。训练失败后正式目录需手动归档再重跑，脚本不自动删除结果。评测可独立重试，例如 `python scripts/eval_checkpoint.py --steps 100 200`。
+smoke 为独立两步训练和每类两条短输出评测，不覆盖正式结果。完整入口先评测 0 步，再训练、逐 checkpoint 评测、生成曲线；训练与评测分进程，避免同时占显存。若准备已完成会复用，已完成评测会跳过。训练失败后正式目录需手动归档再重跑，脚本不自动删除结果。评测可独立重试，例如 `uv run python scripts/eval_checkpoint.py --steps 100 200`。
 
 输出：artifacts/stage1/checkpoint-*；results/stage1/checkpoint-*/metrics.json 与各任务逐样本 JSON；reports/stage1/curve.csv 与 curve.png；results/environment.txt。timing.json 记录训练时间与峰值 GPU 分配显存。图只基于真实结果。
 
@@ -61,6 +61,8 @@ smoke 为独立两步训练和每类两条短输出评测，不覆盖正式结�
 
 依赖已安装并锁定在 requirements.lock.txt。三个数据/loss/评分检查通过。运行 scripts/validate_runtime.py，使用官方 1.5B 架构（1,543,714,304 参数）和官方 tokenizer，随机初始化权重，完成一次全参数 AdamW optimizer step（16 条、长度 512）：峰值已分配显存 14.40 GiB，训练调用约 3.76 秒。随后 HFLM 的生成和 log-likelihood 均成功。原始记录见 reports/runtime-validation.json。这只是接口与资源可行性验证，不是预训练模型实验，也不是稳态吞吐基准。
 
-预训练模型下载未完成，正式数据准备及真实权重 smoke 尚未执行，完整 1000 步训练与六次评测尚未启动。下载过程中默认 Xet 路径较慢，脚本默认禁用 Xet，使用普通 HTTP；部分下载缓存保留，可由 prepare.py 续传。完整命令会先完成准备。真实数据的可用性、真实权重数值稳定性和端到端指标需在正式运行时核验。
+模型下载已改为 ModelScope，权重文件 SHA256 与来源记录到 artifacts/base-source.json；数据集仍使用 Hugging Face。后续准备状态以 data/stage1/manifest.json 为准。依赖改由 uv.lock 锁定，使用 uv sync 安装、uv run 执行。正式训练尚未启动。
 
 参考接口：lm-evaluation-harness 官方 https://github.com/EleutherAI/lm-evaluation-harness ，模型官方 https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct 。
+
+ModelScope 实测：模型下载约 4 分 35 秒；项目环境为 PyTorch 2.8.0+cu128、Transformers 4.57.1、ModelScope 1.40.3。CUDA/BF16、真实模型本地加载与短生成、3 项单元检查均通过，加载验证见 reports/modelscope-validation.json。正式训练未启动。

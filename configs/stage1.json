@@ -5,17 +5,34 @@
   "ag_test_size": 400,
   "gsm_test_size": 200,
   "mmlu_per_subject": 50,
-  "mmlu_subjects": ["abstract_algebra", "elementary_mathematics", "high_school_biology", "high_school_world_history", "logical_fallacies", "computer_security"],
+  "mmlu_subjects": [
+    "abstract_algebra",
+    "elementary_mathematics",
+    "high_school_biology",
+    "high_school_world_history",
+    "logical_fallacies",
+    "computer_security"
+  ],
   "learning_rate": 0.0001,
   "micro_batch_size": 2,
   "gradient_accumulation_steps": 8,
   "max_steps": 1000,
-  "checkpoint_steps": [0, 50, 100, 200, 500, 1000],
+  "checkpoint_steps": [
+    0,
+    50,
+    100,
+    200,
+    500,
+    1000
+  ],
   "max_length": 512,
   "warmup_steps": 30,
   "weight_decay": 0.01,
   "max_grad_norm": 1.0,
   "eval_batch_size": 4,
   "gsm_max_new_tokens": 512,
-  "open_max_new_tokens": 256
+  "open_max_new_tokens": 256,
+  "model_source": "modelscope",
+  "model_revision": "master",
+  "model_download_workers": 8
 }

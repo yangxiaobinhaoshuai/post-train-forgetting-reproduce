@@ -1,0 +1,73 @@
+{
+  "0": {
+    "gsm_n": 200,
+    "gsm_numeric_output_n": 200,
+    "gsm_news_label_n": 0,
+    "gsm_saved_accuracy": 0.73,
+    "gsm_label_counts": {},
+    "fresh_gsm_n": 20,
+    "fresh_gsm_exact_match_n": 11,
+    "fresh_gsm_accuracy": 0.8,
+    "open_news_label_n": 0,
+    "mmlu_n": 300,
+    "mmlu_direct_accuracy": 0.61,
+    "mmlu_harness_accuracy": 0.61,
+    "mmlu_prediction_agreement_n": 298,
+    "mmlu_harness_predictions": {
+      "C": 83,
+      "B": 96,
+      "D": 53,
+      "A": 68
+    },
+    "mmlu_direct_predictions": {
+      "C": 83,
+      "B": 95,
+      "D": 53,
+      "A": 69
+    },
+    "mean_best_letter_logprob_direct": -0.873810623222962,
+    "mmlu_mean_probability_mass_ABCD": 0.673497441322386,
+    "seconds": 53.26712351664901
+  },
+  "50": {
+    "gsm_n": 200,
+    "gsm_numeric_output_n": 0,
+    "gsm_news_label_n": 200,
+    "gsm_saved_accuracy": 0.0,
+    "gsm_label_counts": {
+      "Business": 71,
+      "SciTech": 122,
+      "Sports": 5,
+      "World": 2
+    },
+    "fresh_gsm_n": 20,
+    "fresh_gsm_exact_match_n": 20,
+    "fresh_gsm_accuracy": 0.0,
+    "open_news_label_n": 10,
+    "mmlu_n": 300,
+    "mmlu_direct_accuracy": 0.25,
+    "mmlu_harness_accuracy": 0.25333333333333335,
+    "mmlu_prediction_agreement_n": 288,
+    "mmlu_harness_predictions": {
+      "B": 238,
+      "A": 27,
+      "C": 17,
+      "D": 18
+    },
+    "mmlu_direct_predictions": {
+      "B": 233,
+      "A": 25,
+      "C": 19,
+      "D": 23
+    },
+    "mean_best_letter_logprob_direct": -8.78152051448822,
+    "mmlu_mean_probability_mass_ABCD": 0.0008292600137720127,
+    "seconds": 3.96126252412796
+  },
+  "protocol": {
+    "gsm_max_new_tokens": 512,
+    "gsm_new_sample_selection": "first 20 saved GSM items, same IDs across checkpoints",
+    "chat_template_sha256": "cd8e9439f0570856fd70470bf8889ebd8b5d1107207f67a5efb46e342330527f",
+    "mmlu_scoring": "direct Transformers next-token logits, float32 log_softmax; harness used BF16 log_softmax"
+  }
+}
