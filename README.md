@@ -47,6 +47,14 @@ Stage2 共 8 个 run、760 个优化步，先预留 4–7 GPU 小时，评测占
 
 重新执行同一命令会校验并跳过已完成 run；中断的 run 从其声明的初始模型重跑，不是从中断步恢复优化器。配置、数据、训练/评测代码或 uv.lock 改变时会拒绝混用旧结果，需要先归档该实验的 Stage2 输出再开启新版本。
 
+## M1：A→B 顺序 SFT
+
+```bash
+uv run bash scripts/run_m1.sh --dry-run   # 查看执行计划
+uv run bash scripts/run_m1.sh --smoke     # 每阶段 2 步、每划分 4 条，输出隔离到 *-smoke
+uv run bash scripts/run_m1.sh             # 正式运行；汇总在 reports/m1/SUMMARY.md
+```
+
 ## 查看结果
 
 - `reports/stage1/curve.png`：Stage1 曲线；`AUDIT.md`：断崖式下降复查。
@@ -62,6 +70,6 @@ Stage1 使用 AG News 8000 条训练；GSM8K 200、AG News 400、MMLU 300 和 10
 
 ## 文档与目录
 
-[Stage1 方案](docs/STAGE1.md) · [Stage2 方案](docs/STAGE2.md) · [机器检查](docs/MACHINE.md) · [后续框架](docs/PROPOSAL.md)
+[Stage1 方案](docs/STAGE1.md) · [Stage2 方案](docs/STAGE2.md) · [M1 方案](docs/M1.md) · [机器检查](docs/MACHINE.md) · [后续框架](docs/PROPOSAL.md)
 
 `configs/` 固定参数，`scripts/` 执行入口，`tests/` 检查 mask、数据隔离和状态恢复，`data/` 固定抽样，`artifacts/` 模型，`results/` 原始结果，`reports/` 汇总报告。
