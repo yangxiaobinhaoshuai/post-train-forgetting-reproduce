@@ -1,0 +1,5 @@
+model,template,gsm_accuracy,gsm_news_label_rate,gsm_numeric_output_rate,open_news_label_rate,mmlu_accuracy,mmlu_letter_mass
+base,original,0.75,0.0,1.0,0.0,0.5833333333333334,0.5753285741476685
+base,explicit_task_override,0.75,0.0,1.0,0.0,0.5833333333333334,0.44407430505676726
+collapsed,original,0.0,1.0,0.0,1.0,0.25,1.714083135180352e-08
+collapsed,explicit_task_override,0.0,1.0,0.0,1.0,0.31666666666666665,6.711360499278471e-10

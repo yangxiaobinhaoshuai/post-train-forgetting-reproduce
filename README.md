@@ -38,6 +38,9 @@ uv run bash scripts/run_stage2.sh --runs full_lr1e4 lora_lr1e4
 
 # 重新生成汇总
 uv run python scripts/report_stage2.py
+
+# 可选零训练提示救援诊断
+uv run python scripts/prompt_rescue.py
 ```
 
 Stage2 共 8 个 run、760 个优化步，先预留 4–7 GPU 小时，评测占主要时间。程序持有单实例锁并检查磁盘空间；中间状态在线评测，不为每一点保存完整模型。
@@ -50,6 +53,7 @@ Stage2 共 8 个 run、760 个优化步，先预留 4–7 GPU 小时，评测占
 - `reports/stage2/STATUS.md`：各 run 的完成状态，基线后及每个 run 结束时更新。
 - `results/stage2/running-status.json`：当前执行阶段及 run；各 run 的 `console.log` 保存日志。
 - `reports/stage2/sensitivity.png`、`recovery.png`：固定快速测试集曲线。
+- `reports/prompt_rescue/SUMMARY.md`：提示救援诊断。
 - `reports/stage2/full_endpoints.csv`：完整测试集的终点分数，不与快速集混绘。
 - `results/stage2/<run>/step-*/`：原始回答、候选打分、指标和状态哈希。
 - `artifacts/stage2/`：LoRA adapter，以及指定的两个全参末步模型。

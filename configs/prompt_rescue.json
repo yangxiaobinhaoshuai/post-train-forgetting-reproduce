@@ -1,0 +1,20 @@
+{
+  "description": "Stage2 可选零训练诊断：只改提示，不训练。两个模型同时换模板，结果单列，不替换主曲线。",
+  "models": {
+    "base": "artifacts/base",
+    "collapsed": "artifacts/stage1/checkpoint-50"
+  },
+  "tokenizer": "artifacts/base",
+  "eval_data": "data/stage2/eval_quick.json",
+  "tasks": ["gsm_test", "open", "mmlu_test"],
+  "templates": {
+    "original": "",
+    "explicit_task_override": "This is NOT a news classification task. Do not reply with a news category (World, Sports, Business, SciTech). Do exactly what the request below asks.\n\n"
+  },
+  "batch_size": 4,
+  "max_context_length": 2048,
+  "gsm_max_new_tokens": 512,
+  "open_max_new_tokens": 256,
+  "decode": "greedy",
+  "softmax_dtype": "float32"
+}

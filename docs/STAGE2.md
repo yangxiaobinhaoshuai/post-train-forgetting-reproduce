@@ -1,6 +1,14 @@
 # Stage2：定位遗忘、比较 LoRA、尝试恢复
 
-状态：Stage2 入口已实现；当前运行状态见 results/stage2/running-status.json。运行 `uv run bash scripts/run_stage2.sh`；配置见 `configs/stage2.json`，不使用旧 Stage1 训练入口。
+状态：8 个 run 与提示救援诊断已于 2026-11-17 全部完成（单 seed，探索性）。汇总见 reports/stage2、reports/prompt_rescue。
+
+初步结论：
+- 崩塌只出现在全参 LR 1e-4；同 LR 的 LoRA 与全参 LR 2e-5 学会 AG，GSM/MMLU 基本保持。
+- GSM gold 32 步可部分恢复数学（39.5→48.5%，随独特样本数上升），但 MMLU 仍在随机水平、字母概率质量近 0。
+- 正常模型做同样的数学训练，AG 也降到 72%；继续 AG 训练保持崩塌。
+- 提示救援无效：坍缩模型换提示后 GSM/开放题仍 100% 输出新闻类别。
+
+运行 `uv run bash scripts/run_stage2.sh`；配置见 `configs/stage2.json`，不使用旧 Stage1 训练入口。
 
 ## 目标与边界
 
@@ -84,6 +92,8 @@ LoRA 参数依据 [PEFT 文档](https://huggingface.co/docs/peft/en/package_refe
 
 执行顺序为数据准备、两个起点评测、full_lr1e4、lora_lr1e4、full_lr2e5、五个恢复/控制 run、汇总。支持 --dry-run、--prepare-only、--smoke 和 --runs；smoke 在隔离目录运行每个 run 的 2 步。已完成 run 校验后跳过，未完成 run 重跑；不保存优化器恢复状态。报告至少给出早期曲线、LoRA/全参权衡图、恢复样本量曲线和原始回答对照。零恢复或 LoRA 同样崩塌都是允许的结果。
 
-实现边界：可选提示救援和 DPO/GRPO 尚未接入本入口；AG/GSM dev 已准备但不自动选最优 checkpoint。完整评测的快速子集视图由同批预测过滤得到，不额外生成。
+可选提示救援为独立入口 `uv run python scripts/prompt_rescue.py`（配置 `configs/prompt_rescue.json`，原模型与 step 50 各用原提示/明确任务提示评快速集的 GSM、开放题、MMLU），输出 results/prompt_rescue 与 reports/prompt_rescue/SUMMARY.md；`scripts/after_stage2.sh` 等 Stage2 释放进程锁后自动运行它。
+
+实现边界：DPO/GRPO 尚未接入；AG/GSM dev 已准备但不自动选最优 checkpoint。完整评测的快速子集视图由同批预测过滤得到，不额外生成。
 
 验证：8 项单元检查通过；全部 8 个 run 的两步 smoke 通过，输出位于 reports/stage2-smoke，不能作为正式实验结果。
