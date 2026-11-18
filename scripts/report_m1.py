@@ -1,93 +1,96 @@
-"""汇总 M1：R 矩阵、遗忘/BWT、学习量、配对 bootstrap CI、曲线。只读取已完成的评测。"""
+"""汇总 M1/M2：每条方法链的 R 矩阵、AA/遗忘/BWT、学习量、配对 bootstrap CI、曲线。只读取已完成的评测。"""
 import argparse
 import csv
 from common import ROOT, read_json
-from m1_common import eval_steps, load_config, paired_bootstrap, roots
+from m1_common import chain, eval_steps, load_config, paired_bootstrap, roots
 
 METRICS = ['ll_accuracy', 'gen_accuracy', 'll_macro_f1', 'format_valid_rate', 'gold_nll']
 
 
 def load(R, run, step):
     folder = R['results'] / run / f'step-{step}'
-    return folder if (folder / 'eval_complete.json').exists() else None
+    return read_json(folder / 'metrics.json') | {'_folder': folder} if (folder / 'eval_complete.json').exists() else None
 
 
-def correct(folder, task):
-    return [int(r['pred_ll'] == r['label']) for r in read_json(folder / f'{task}_test.json')]
+def correct(m, task):
+    return [int(r['pred_ll'] == r['label']) for r in read_json(m['_folder'] / f'{task}_test.json')]
+
+
+def pp(x):
+    return f'{100*x:.1f}'
 
 
 def report(c, smoke=False):
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
-    R = roots(smoke); out = R['reports']; out.mkdir(parents=True, exist_ok=True)
-    steps = eval_steps(c, smoke); n = steps[-1]; tasks = list(c['tasks'])
-    by_id = {r['id']: r for r in c['runs']}
-    a_id = next(r['id'] for r in c['runs'] if r['init'] == 'base')
-    b_ids = [r['id'] for r in c['runs'] if r['init'] == a_id]
-    # Curves: global step; B runs start from the A endpoint.
-    points = {}
-    for run in [a_id] + b_ids:
-        seq = [('base', 0, 0)] if run == a_id else [(a_id, n, n)]
-        seq += [(run, s, s + (0 if run == a_id else n)) for s in steps]
-        points[run] = [(g, load(R, r, s)) for r, s, g in seq]
+    R = roots(c, smoke); out = R['reports']; out.mkdir(parents=True, exist_ok=True)
+    steps = eval_steps(c, smoke); n = steps[-1]; tasks = list(c['tasks']); by_id = {r['id']: r for r in c['runs']}
+    leaves = [r['id'] for r in c['runs'] if not any(x['init'] == r['id'] for x in c['runs'])]
+    s = c['evaluation']['bootstrap_samples']
     rows = []
-    for run, pts in points.items():
-        for g, folder in pts:
-            if folder is None: continue
-            m = read_json(folder / 'metrics.json')
+    for leaf in leaves:
+        pts = [('base', 0, 0)] + [(run, st, i * n + st) for i, run in enumerate(chain(c, leaf)) for st in steps]
+        for run, st, g in pts:
+            m = load(R, run, st)
+            if m is None: continue
             for task in tasks:
                 for split in c['evaluation']['splits']:
-                    rows.append({'run': run, 'global_step': g, 'task': task, 'split': split, **{k: m[f'{task}_{split}'][k] for k in METRICS}})
+                    if f'{task}_{split}' in m:
+                        rows.append({'chain': leaf, 'run': run, 'global_step': g, 'task': task, 'split': split, **{k: m[f'{task}_{split}'][k] for k in METRICS}})
     if rows:
         with (out / 'curves.csv').open('w', newline='') as f:
             w = csv.DictWriter(f, fieldnames=list(rows[0])); w.writeheader(); w.writerows(rows)
-        fig, axes = plt.subplots(1, len(tasks), figsize=(6 * len(tasks), 4))
+        fig, axes = plt.subplots(1, len(tasks), figsize=(5.5 * len(tasks), 4))
         for ax, task in zip(axes, tasks):
-            for run in b_ids:
-                xs = [r for r in rows if r['task'] == task and r['split'] == 'test' and (r['run'] == run or (r['run'] == a_id))]
-                xs = sorted(xs, key=lambda r: r['global_step'])
-                line, = ax.plot([r['global_step'] for r in xs], [100 * r['ll_accuracy'] for r in xs], marker='o', label=f'{run} label-LL')
-                ax.plot([r['global_step'] for r in xs], [100 * r['gen_accuracy'] for r in xs], ls='--', color=line.get_color(), label=f'{run} generation')
-            ax.axvline(n, color='grey', lw=0.8); ax.set_title(f'{task} test'); ax.set_xlabel('Optimizer steps (A then B)')
-            ax.set_ylabel('Accuracy (%)'); ax.set_ylim(-2, 102)
+            for leaf in leaves:
+                xs = sorted([r for r in rows if r['chain'] == leaf and r['task'] == task and r['split'] == 'test'], key=lambda r: r['global_step'])
+                line, = ax.plot([r['global_step'] for r in xs], [100 * r['ll_accuracy'] for r in xs], marker='o', ms=3, label=f'{leaf} label-LL')
+                ax.plot([r['global_step'] for r in xs], [100 * r['gen_accuracy'] for r in xs], ls='--', color=line.get_color(), label=f'{leaf} generation')
+            for i in range(1, len(chain(c, leaves[0]))): ax.axvline(i * n, color='grey', lw=0.8)
+            ax.set_title(f'{task} test'); ax.set_xlabel('Optimizer steps (stages in sequence)'); ax.set_ylabel('Accuracy (%)'); ax.set_ylim(-2, 102)
         axes[0].legend(fontsize=7); fig.tight_layout(); fig.savefig(out / 'curves.png', dpi=160); plt.close(fig)
-    # R matrix on test, label-likelihood accuracy (primary) and generation accuracy.
-    stages = [('初始', load(R, 'base', 0)), (f'{a_id} 后', load(R, a_id, n))] + [(f'{b} 后', load(R, b, n)) for b in b_ids]
-    lines = ['# M1 汇总', '', ('smoke 验证结果，不可作为结论。' if smoke else '单 seed pilot；用于验证证据链，不作正式结论。'), '',
-             '## R 矩阵（test，标签似然准确率 % / 自由生成准确率 %）', '', '| 阶段 | ' + ' | '.join(tasks) + ' |', '|---|' + '---:|' * len(tasks)]
-    for name, folder in stages:
-        if folder is None: lines.append(f'| {name} | ' + ' | '.join('—' for _ in tasks) + ' |'); continue
-        m = read_json(folder / 'metrics.json')
-        lines.append(f'| {name} | ' + ' | '.join(f"{100*m[f'{t}_test']['ll_accuracy']:.1f} / {100*m[f'{t}_test']['gen_accuracy']:.1f}" for t in tasks) + ' |')
-    base, a_end = load(R, 'base', 0), load(R, a_id, n)
-    a_task, b_task = by_id[a_id]['task'], by_id[b_ids[0]]['task']
-    if base and a_end:
-        mb, ma = read_json(base / 'metrics.json'), read_json(a_end / 'metrics.json')
-        gain = ma[f'{a_task}_val']['ll_accuracy'] - mb[f'{a_task}_val']['ll_accuracy']
-        lines += ['', '## 学习检查', '', f"- {a_task} val 标签似然准确率：{100*mb[f'{a_task}_val']['ll_accuracy']:.1f} → {100*ma[f'{a_task}_val']['ll_accuracy']:.1f}"
-                  f"（{100*gain:+.1f} pp；pilot 工程判据 ≥ +5 pp：{'通过' if gain >= 0.05 else '未通过'}）"]
-    ends = {b: load(R, b, n) for b in b_ids}
-    if a_end and any(ends.values()):
-        lines += ['', f'## {a_task} 遗忘（test，标签似然；配对 bootstrap 95% CI，只量化测试样本不确定性）', '',
-                  '| 方法 | 遗忘 F = R[A,A]−R[B,A] (pp) | BWT (pp) | B 学习量 R[B,B]−R[A,B] (pp) |', '|---|---:|---:|---:|']
-        ca = correct(a_end, a_task); s = c['evaluation']['bootstrap_samples']
-        for b, folder in ends.items():
-            if folder is None: continue
-            boot = paired_bootstrap(ca, correct(folder, a_task), s, c['seed'])
-            learn = read_json(folder / 'metrics.json')[f'{b_task}_test']['ll_accuracy'] - read_json(a_end / 'metrics.json')[f'{b_task}_test']['ll_accuracy']
-            lines.append(f"| {b} | {100*boot['mean']:.1f} [{100*boot['ci95'][0]:.1f}, {100*boot['ci95'][1]:.1f}] | {-100*boot['mean']:.1f} | {100*learn:+.1f} |")
-        if len(b_ids) == 2 and all(ends.values()):
-            x, y = b_ids
-            boot = paired_bootstrap(correct(ends[y], a_task), correct(ends[x], a_task), s, c['seed'])
-            lines += ['', f"{y} − {x} 在 {a_task} test 上的差：{100*boot['mean']:+.1f} pp [{100*boot['ci95'][0]:+.1f}, {100*boot['ci95'][1]:+.1f}]"]
-    for b in b_ids:
-        e = R['results'] / b / 'exposure.json'
-        if e.exists():
-            x = read_json(e); lines.append(f"- {b} 曝光：新任务 {x['new_samples']} 条 / replay {x['replay_samples']} 条；目标 token 新 {x['new_target_tokens']} / replay {x['replay_target_tokens']}")
-    lines += ['', '图：curves.png（实线标签似然，虚线自由生成）。逐样本输出见 results 同名目录。']
+
+    lines = [f"# {c['name'].upper()} 汇总", '', ('smoke 验证结果，不可作为结论。' if smoke else '单 seed pilot；探索性，不作正式结论。'), '',
+             '标签似然准确率为主指标；括号外/内为 test 标签似然 / 自由生成准确率（%）。配对 bootstrap 95% CI 只量化测试样本不确定性。']
+    base = load(R, 'base', 0); finals = {}
+    for leaf in leaves:
+        runs = chain(c, leaf); order = [by_id[r]['task'] for r in runs]
+        ends = [base] + [load(R, r, n) for r in runs]
+        lines += ['', f'## {leaf}：' + ' → '.join(order), '', '| 阶段 | ' + ' | '.join(tasks) + ' |', '|---|' + '---:|' * len(tasks)]
+        for name, m in zip(['初始'] + [f'{r} 后' for r in runs], ends):
+            cells = ['—' if m is None else f"{pp(m[f'{t}_test']['ll_accuracy'])} ({pp(m[f'{t}_test']['gen_accuracy'])})" for t in tasks]
+            lines.append(f'| {name} | ' + ' | '.join(cells) + ' |')
+        if any(m is None for m in ends): continue
+        finals[leaf] = ends[-1]
+        acc = lambda t, i: ends[i][f'{order[t]}_test']['ll_accuracy']  # R[i, task t]; stage index 0 = initial
+        T = len(order)
+        aa = sum(acc(t, T) for t in range(T)) / T
+        lines += ['', f'- 最终平均 AA：{pp(aa)}']
+        if T > 1:
+            forget = [max(acc(t, i) for i in range(t + 1, T)) - acc(t, T) for t in range(T - 1)]
+            bwt = [acc(t, T) - acc(t, t + 1) for t in range(T - 1)]
+            lines.append(f'- 平均遗忘 F：{pp(sum(forget)/len(forget))} pp；BWT：{pp(sum(bwt)/len(bwt))} pp')
+            for t in range(T - 1):
+                b = paired_bootstrap(correct(ends[t + 1], order[t]), correct(ends[T], order[t]), s, c['seed'])
+                lines.append(f"- {order[t]}：学完后 {pp(acc(t, t+1))} → 最终 {pp(acc(t, T))}，下降 {pp(b['mean'])} pp [{pp(b['ci95'][0])}, {pp(b['ci95'][1])}]；阶段末最大值后遗忘 {pp(forget[t])} pp")
+        for t in range(T):
+            val = lambda i: ends[i][f'{order[t]}_val']['ll_accuracy']
+            lines.append(f"- 学习量 {order[t]}：test {pp(acc(t, t+1) - acc(t, t))} pp；val {pp(val(t))} → {pp(val(t+1))}（{'≥' if val(t+1) - val(t) >= 0.05 else '<'} +5 pp 判据）")
+        for r in runs:
+            e = R['results'] / r / 'exposure.json'
+            if e.exists() and by_id[r]['replay_fraction']:
+                x = read_json(e)
+                lines.append(f"- {r} 曝光：新任务 {x['new_samples']} 条 / replay {x['replay_samples']} 条；目标 token 新 {x['new_target_tokens']} / replay {x['replay_target_tokens']}")
+    if len(finals) == 2:
+        (x, mx), (y, my) = finals.items()
+        lines += ['', f'## {y} − {x}（最终 test，标签似然）', '']
+        for t in tasks:
+            b = paired_bootstrap(correct(my, t), correct(mx, t), s, c['seed'])
+            lines.append(f"- {t}：{b['mean']*100:+.1f} pp [{b['ci95'][0]*100:+.1f}, {b['ci95'][1]*100:+.1f}]")
+    lines += ['', '图：curves.png（实线标签似然，虚线自由生成，竖线为阶段边界）。逐样本输出见 results 同名目录。']
     (out / 'SUMMARY.md').write_text('\n'.join(lines) + '\n')
-    print('M1 report:', out / 'SUMMARY.md', flush=True)
+    print('Report:', out / 'SUMMARY.md', flush=True)
 
 
 if __name__ == '__main__':

@@ -1,0 +1,152 @@
+[
+  {
+    "format": "hash",
+    "x": "base",
+    "y": "recover512",
+    "both": 0,
+    "expected_if_independent": 0.0,
+    "p_y_given_x": null,
+    "p_y_given_not_x": 0.0,
+    "phi": null
+  },
+  {
+    "format": "hash",
+    "x": "base",
+    "y": "base_math512",
+    "both": 0,
+    "expected_if_independent": 0.0,
+    "p_y_given_x": null,
+    "p_y_given_not_x": 0.25,
+    "phi": null
+  },
+  {
+    "format": "hash",
+    "x": "base_math512",
+    "y": "recover512",
+    "both": 0,
+    "expected_if_independent": 0.0,
+    "p_y_given_x": 0.0,
+    "p_y_given_not_x": 0.0,
+    "phi": null
+  },
+  {
+    "format": "boxed",
+    "x": "base",
+    "y": "recover512",
+    "both": 0,
+    "expected_if_independent": 0.0,
+    "p_y_given_x": null,
+    "p_y_given_not_x": 0.0,
+    "phi": null
+  },
+  {
+    "format": "boxed",
+    "x": "base",
+    "y": "base_math512",
+    "both": 0,
+    "expected_if_independent": 0.0,
+    "p_y_given_x": null,
+    "p_y_given_not_x": 0.0,
+    "phi": null
+  },
+  {
+    "format": "boxed",
+    "x": "base_math512",
+    "y": "recover512",
+    "both": 0,
+    "expected_if_independent": 0.0,
+    "p_y_given_x": null,
+    "p_y_given_not_x": 0.0,
+    "phi": null
+  },
+  {
+    "format": "answer_is",
+    "x": "base",
+    "y": "recover512",
+    "both": 0,
+    "expected_if_independent": 0.0,
+    "p_y_given_x": null,
+    "p_y_given_not_x": 0.0,
+    "phi": null
+  },
+  {
+    "format": "answer_is",
+    "x": "base",
+    "y": "base_math512",
+    "both": 0,
+    "expected_if_independent": 0.0,
+    "p_y_given_x": null,
+    "p_y_given_not_x": 0.0,
+    "phi": null
+  },
+  {
+    "format": "answer_is",
+    "x": "base_math512",
+    "y": "recover512",
+    "both": 0,
+    "expected_if_independent": 0.0,
+    "p_y_given_x": null,
+    "p_y_given_not_x": 0.0,
+    "phi": null
+  },
+  {
+    "format": "plain",
+    "x": "base",
+    "y": "recover512",
+    "both": 0,
+    "expected_if_independent": 0.0,
+    "p_y_given_x": null,
+    "p_y_given_not_x": 0.0,
+    "phi": null
+  },
+  {
+    "format": "plain",
+    "x": "base",
+    "y": "base_math512",
+    "both": 0,
+    "expected_if_independent": 0.0,
+    "p_y_given_x": null,
+    "p_y_given_not_x": 0.0,
+    "phi": null
+  },
+  {
+    "format": "plain",
+    "x": "base_math512",
+    "y": "recover512",
+    "both": 0,
+    "expected_if_independent": 0.0,
+    "p_y_given_x": null,
+    "p_y_given_not_x": 0.0,
+    "phi": null
+  },
+  {
+    "format": "direct",
+    "x": "base",
+    "y": "recover512",
+    "both": 0,
+    "expected_if_independent": 0.0,
+    "p_y_given_x": null,
+    "p_y_given_not_x": 0.0,
+    "phi": null
+  },
+  {
+    "format": "direct",
+    "x": "base",
+    "y": "base_math512",
+    "both": 0,
+    "expected_if_independent": 0.0,
+    "p_y_given_x": null,
+    "p_y_given_not_x": 0.25,
+    "phi": null
+  },
+  {
+    "format": "direct",
+    "x": "base_math512",
+    "y": "recover512",
+    "both": 0,
+    "expected_if_independent": 0.0,
+    "p_y_given_x": 0.0,
+    "p_y_given_not_x": 0.0,
+    "phi": null
+  }
+]

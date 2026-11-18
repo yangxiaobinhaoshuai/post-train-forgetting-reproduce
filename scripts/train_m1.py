@@ -1,4 +1,4 @@
-"""M1 单阶段训练：同一 LoRA adapter 延续，优化器与调度器每阶段重置；按固定顺序喂样本，里程碑保存 adapter。"""
+"""M1/M2 单阶段训练：同一 LoRA adapter 延续，优化器与调度器每阶段重置；按固定顺序喂样本，里程碑保存 adapter。"""
 import argparse
 import collections
 import gc
@@ -10,7 +10,7 @@ from torch.utils.data import SequentialSampler
 from transformers import AutoModelForCausalLM, AutoTokenizer, Trainer, TrainerCallback, TrainingArguments, set_seed
 from common import ROOT, read_json
 from train import Collator
-from m1_common import atomic_json, batch_size, check_space, digest, encode, eval_steps, load_config, roots, stage_order
+from m1_common import atomic_json, batch_size, buffer_name, check_space, digest, encode, eval_steps, labels_of, load_config, roots, stage_order
 from prepare_m1 import verify
 
 
@@ -36,11 +36,11 @@ def spec_of(c, run_id):
 
 
 def final_adapter(c, run_id, smoke):
-    return roots(smoke)['artifacts'] / run_id / f'step-{eval_steps(c, smoke)[-1]}'
+    return roots(c, smoke)['artifacts'] / run_id / f'step-{eval_steps(c, smoke)[-1]}'
 
 
 def train_run(c, run_id, smoke=False):
-    R = roots(smoke); spec = spec_of(c, run_id)
+    R = roots(c, smoke); spec = spec_of(c, run_id)
     res, art = R['results'] / run_id, R['artifacts'] / run_id
     identity = {'spec': spec, 'training': c['training'], 'lora': c['lora'], 'seed': c['seed'], 'smoke': smoke,
                 'data_manifest_sha256': digest(R['data'] / 'manifest.json'),
@@ -49,28 +49,29 @@ def train_run(c, run_id, smoke=False):
     if done.exists():
         saved = read_json(done)
         if saved['identity'] != identity: raise RuntimeError(f'{run_id}: completed training identity mismatch; archive outputs first')
+        final = str((final_adapter(c, run_id, smoke) / 'adapter_model.safetensors').relative_to(ROOT))
         for rel, h in saved['adapter_sha256'].items():
-            if digest(ROOT / rel) != h: raise RuntimeError(f'Adapter changed: {rel}')
+            # Intermediate adapters may be deleted after evaluation (storage policy); the stage endpoint must remain.
+            if (rel == final or (ROOT / rel).exists()) and digest(ROOT / rel) != h: raise RuntimeError(f'Adapter changed: {rel}')
         print(f'Skip completed training: {run_id}', flush=True); return
     verify(c); check_space(c)
     atomic_json(res / 'run.json', identity)
-    t = c['training']; task = spec['task']; labels = c['tasks'][task]['labels']
+    t = c['training']; task = spec['task']
     steps = 2 if smoke else t['steps_per_stage']; total = steps * batch_size(c)
     new = read_json(R['data'] / f'{task}_train.json')
-    buffer = read_json(R['data'] / 'replay_buffer.json') if spec['replay_fraction'] else []
+    new = [dict(r, task=task) for r in new]
+    buffer = read_json(R['data'] / f'{buffer_name(spec)}.json') if spec['replay_fraction'] else []
     order = stage_order(new, buffer, total, spec['replay_fraction'], c['seed'])
     tok = AutoTokenizer.from_pretrained(ROOT / c['base'], local_files_only=True); tok.padding_side = 'right'
-    src_task = c['replay']['source_task']
-    encoded = [encode(tok, task if kind == 'new' else src_task, r, labels if kind == 'new' else c['tasks'][src_task]['labels'], t['max_length'])[0]
-               for kind, r in order]
+    encoded = [encode(tok, r['task'], r, labels_of(c, r['task']), t['max_length'])[0] for _, r in order]
     exposure = {'new_samples': sum(k == 'new' for k, _ in order), 'replay_samples': sum(k == 'replay' for k, _ in order),
                 'new_label_counts': dict(collections.Counter(r['label'] for k, r in order if k == 'new')),
-                'replay_label_counts': dict(collections.Counter(r['label'] for k, r in order if k == 'replay')),
+                'replay_label_counts': dict(collections.Counter(f"{r['task']}:{r['label']}" for k, r in order if k == 'replay')),
                 'new_target_tokens': sum(sum(x != -100 for x in e['labels']) for (k, _), e in zip(order, encoded) if k == 'new'),
                 'replay_target_tokens': sum(sum(x != -100 for x in e['labels']) for (k, _), e in zip(order, encoded) if k == 'replay'),
                 'new_input_tokens': sum(len(e['input_ids']) for (k, _), e in zip(order, encoded) if k == 'new'),
                 'replay_input_tokens': sum(len(e['input_ids']) for (k, _), e in zip(order, encoded) if k == 'replay')}
-    atomic_json(res / 'order.json', [{'kind': k, 'task': task if k == 'new' else src_task, 'source_id': r['source_id']} for k, r in order])
+    atomic_json(res / 'order.json', [{'kind': k, 'task': r['task'], 'source_id': r['source_id']} for k, r in order])
     atomic_json(res / 'exposure.json', exposure)
     set_seed(c['seed'])
     model = AutoModelForCausalLM.from_pretrained(ROOT / c['base'], local_files_only=True, torch_dtype=torch.bfloat16, attn_implementation='sdpa')

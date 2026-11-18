@@ -1,4 +1,4 @@
-"""M1 评测：对一个 checkpoint（底座或 LoRA adapter）在所有任务的 test/val 上做标签似然打分与自由生成。"""
+"""M1/M2 评测：对一个 checkpoint（底座或 LoRA adapter）在所有任务的 test/val 上做标签似然打分与自由生成。"""
 import argparse
 import collections
 import gc
@@ -8,7 +8,7 @@ from lm_eval.models.huggingface import HFLM
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from common import ROOT, chat, read_json
 from eval_checkpoint import request
-from m1_common import atomic_json, digest, load_config, macro_f1, prompt, roots
+from m1_common import atomic_json, digest, eval_steps, load_config, macro_f1, prompt, roots
 
 
 def score_split(lm, tok, c, task, rows):
@@ -43,9 +43,12 @@ def score_split(lm, tok, c, task, rows):
 
 
 def evaluate(c, run_id, step, smoke=False):
-    R = roots(smoke); out = R['results'] / run_id / f'step-{step}'
+    R = roots(c, smoke); out = R['results'] / run_id / f'step-{step}'
+    # val is for learning checks at stage ends; intermediate points only need test (optional config, default: every point).
+    stage_end = run_id == 'base' or step == eval_steps(c, smoke)[-1]
+    splits = [s for s in c['evaluation']['splits'] if s != 'val' or stage_end or c['evaluation'].get('val_at', 'every_point') == 'every_point']
     adapter = None if run_id == 'base' else R['artifacts'] / run_id / f'step-{step}'
-    identity = {'run': run_id, 'step': step, 'evaluation': c['evaluation'], 'tasks': c['tasks'], 'smoke': smoke,
+    identity = {'run': run_id, 'step': step, 'evaluation': c['evaluation'], 'tasks': c['tasks'], 'splits': splits, 'smoke': smoke,
                 'data_manifest_sha256': digest(R['data'] / 'manifest.json'),
                 'adapter_sha256': None if adapter is None else digest(adapter / 'adapter_model.safetensors')}
     done = out / 'eval_complete.json'
@@ -65,7 +68,7 @@ def evaluate(c, run_id, step, smoke=False):
     metrics = {'identity': identity}; start = time.perf_counter()
     with torch.inference_mode():
         for task in c['tasks']:
-            for split in e['splits']:
+            for split in splits:
                 rows = read_json(R['data'] / f'{task}_{split}.json')
                 if smoke: rows = rows[:4]
                 t0 = time.perf_counter()

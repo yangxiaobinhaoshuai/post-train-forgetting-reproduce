@@ -1,0 +1,155 @@
+{
+  "name": "m2",
+  "model": "Qwen/Qwen2.5-1.5B-Instruct",
+  "base": "artifacts/base",
+  "source_model_sha256": "dd924a11b4c220f385b51ffa522daea7c9f3d850e31b162bb5661df483c6d3ee",
+  "seed": 42,
+  "tasks": {
+    "ag": {
+      "dataset": "fancyzhx/ag_news",
+      "labels": [
+        "World",
+        "Sports",
+        "Business",
+        "SciTech"
+      ]
+    },
+    "dbpedia": {
+      "dataset": "fancyzhx/dbpedia_14",
+      "labels": [
+        "Company",
+        "Educational Institution",
+        "Artist",
+        "Athlete",
+        "Office Holder",
+        "Mean of Transportation",
+        "Building",
+        "Natural Place",
+        "Village",
+        "Animal",
+        "Plant",
+        "Album",
+        "Film",
+        "Written Work"
+      ]
+    },
+    "yahoo": {
+      "dataset": "community-datasets/yahoo_answers_topics",
+      "max_text_chars": 1000,
+      "labels": [
+        "Society & Culture",
+        "Science & Mathematics",
+        "Health",
+        "Education & Reference",
+        "Computers & Internet",
+        "Sports",
+        "Business & Finance",
+        "Entertainment & Music",
+        "Family & Relationships",
+        "Politics & Government"
+      ]
+    }
+  },
+  "split_sizes": {
+    "train": 5000,
+    "val": 500,
+    "test": 1000
+  },
+  "training": {
+    "max_length": 512,
+    "micro_batch_size": 2,
+    "gradient_accumulation_steps": 8,
+    "steps_per_stage": 312,
+    "learning_rate": 0.0001,
+    "warmup_ratio": 0.03,
+    "lr_scheduler": "constant_with_warmup",
+    "weight_decay": 0.01,
+    "max_grad_norm": 1.0,
+    "optimizer": "adamw_torch",
+    "gradient_checkpointing": true,
+    "reset_optimizer_each_stage": true
+  },
+  "lora": {
+    "r": 16,
+    "alpha": 32,
+    "dropout": 0.05,
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ],
+    "bias": "none"
+  },
+  "eval_fractions": [
+    0.25,
+    0.5,
+    0.75,
+    1.0
+  ],
+  "replay": {
+    "buffer_size": 500
+  },
+  "runs": [
+    {
+      "id": "A",
+      "task": "ag",
+      "init": "base",
+      "replay_fraction": 0.0,
+      "replay_tasks": []
+    },
+    {
+      "id": "AB_seq",
+      "task": "dbpedia",
+      "init": "A",
+      "replay_fraction": 0.0,
+      "replay_tasks": []
+    },
+    {
+      "id": "ABC_seq",
+      "task": "yahoo",
+      "init": "AB_seq",
+      "replay_fraction": 0.0,
+      "replay_tasks": []
+    },
+    {
+      "id": "AB_replay10",
+      "task": "dbpedia",
+      "init": "A",
+      "replay_fraction": 0.1,
+      "replay_tasks": [
+        "ag"
+      ]
+    },
+    {
+      "id": "ABC_replay10",
+      "task": "yahoo",
+      "init": "AB_replay10",
+      "replay_fraction": 0.1,
+      "replay_tasks": [
+        "ag",
+        "dbpedia"
+      ]
+    }
+  ],
+  "evaluation": {
+    "splits": [
+      "test",
+      "val"
+    ],
+    "batch_size": 16,
+    "max_context_length": 2048,
+    "max_new_tokens": 16,
+    "softmax_dtype": "float32",
+    "label_score": "sum_logprob_label_plus_eos",
+    "bootstrap_samples": 2000,
+    "val_at": "stage_end"
+  },
+  "storage": {
+    "minimum_free_gib": 2,
+    "keep_intermediate_adapters": false
+  }
+}

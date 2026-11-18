@@ -1,4 +1,5 @@
 {
+  "name": "m1",
   "model": "Qwen/Qwen2.5-1.5B-Instruct",
   "base": "artifacts/base",
   "source_model_sha256": "dd924a11b4c220f385b51ffa522daea7c9f3d850e31b162bb5661df483c6d3ee",
@@ -6,14 +7,38 @@
   "tasks": {
     "ag": {
       "dataset": "fancyzhx/ag_news",
-      "labels": ["World", "Sports", "Business", "SciTech"]
+      "labels": [
+        "World",
+        "Sports",
+        "Business",
+        "SciTech"
+      ]
     },
     "dbpedia": {
       "dataset": "fancyzhx/dbpedia_14",
-      "labels": ["Company", "Educational Institution", "Artist", "Athlete", "Office Holder", "Mean of Transportation", "Building", "Natural Place", "Village", "Animal", "Plant", "Album", "Film", "Written Work"]
+      "labels": [
+        "Company",
+        "Educational Institution",
+        "Artist",
+        "Athlete",
+        "Office Holder",
+        "Mean of Transportation",
+        "Building",
+        "Natural Place",
+        "Village",
+        "Animal",
+        "Plant",
+        "Album",
+        "Film",
+        "Written Work"
+      ]
     }
   },
-  "split_sizes": {"train": 5000, "val": 500, "test": 1000},
+  "split_sizes": {
+    "train": 5000,
+    "val": 500,
+    "test": 1000
+  },
   "training": {
     "max_length": 512,
     "micro_batch_size": 2,
@@ -32,18 +57,56 @@
     "r": 16,
     "alpha": 32,
     "dropout": 0.05,
-    "target_modules": ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
+    "target_modules": [
+      "q_proj",
+      "k_proj",
+      "v_proj",
+      "o_proj",
+      "gate_proj",
+      "up_proj",
+      "down_proj"
+    ],
     "bias": "none"
   },
-  "eval_fractions": [0.25, 0.5, 0.75, 1.0],
-  "replay": {"buffer_size": 500, "source_task": "ag"},
+  "eval_fractions": [
+    0.25,
+    0.5,
+    0.75,
+    1.0
+  ],
+  "replay": {
+    "buffer_size": 500
+  },
   "runs": [
-    {"id": "A", "task": "ag", "init": "base", "replay_fraction": 0.0},
-    {"id": "AB_seq", "task": "dbpedia", "init": "A", "replay_fraction": 0.0},
-    {"id": "AB_replay10", "task": "dbpedia", "init": "A", "replay_fraction": 0.1}
+    {
+      "id": "A",
+      "task": "ag",
+      "init": "base",
+      "replay_fraction": 0.0,
+      "replay_tasks": []
+    },
+    {
+      "id": "AB_seq",
+      "task": "dbpedia",
+      "init": "A",
+      "replay_fraction": 0.0,
+      "replay_tasks": []
+    },
+    {
+      "id": "AB_replay10",
+      "task": "dbpedia",
+      "init": "A",
+      "replay_fraction": 0.1,
+      "replay_tasks": [
+        "ag"
+      ]
+    }
   ],
   "evaluation": {
-    "splits": ["test", "val"],
+    "splits": [
+      "test",
+      "val"
+    ],
     "batch_size": 16,
     "max_context_length": 2048,
     "max_new_tokens": 16,
@@ -51,5 +114,7 @@
     "label_score": "sum_logprob_label_plus_eos",
     "bootstrap_samples": 2000
   },
-  "storage": {"minimum_free_gib": 3}
+  "storage": {
+    "minimum_free_gib": 3
+  }
 }

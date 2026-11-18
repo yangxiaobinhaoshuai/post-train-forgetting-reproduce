@@ -1,6 +1,7 @@
-"""M1 顺序入口：准备数据 → 评测底座 → 依次训练各阶段并评测里程碑 → 汇总。持进程锁，跳过已完成部分。"""
+"""M1/M2 顺序入口（按 --config 选择实验）：准备数据 → 评测底座 → 依次训练各阶段并评测里程碑 → 汇总。持进程锁，跳过已完成部分。"""
 import argparse
 import fcntl
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -30,18 +31,18 @@ def main():
     if a.dry_run:
         for kind, run, step in jobs: print(kind, run, '' if step is None else f'step {step}')
         return
-    R = roots(a.smoke)
+    R = roots(c, a.smoke)
     for k in ['results', 'artifacts', 'reports']: R[k].mkdir(parents=True, exist_ok=True)
     with (R['results'] / '.lock').open('w') as lock:
         try: fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError: raise SystemExit('Another M1 pipeline is already running')
+        except BlockingIOError: raise SystemExit(f"Another {c['name']} pipeline is already running")
         prepare(c)
         if a.prepare_only: return
         identity = {'config': c, 'data_manifest_sha256': digest(R['data'] / 'manifest.json'), 'uv_lock_sha256': digest(ROOT / 'uv.lock'),
                     'code': {s: digest(ROOT / 'scripts' / s) for s in CODE}, 'smoke': a.smoke}
         path = R['results'] / 'experiment.json'
         if path.exists() and read_json(path)['signature'] != signature(identity):
-            raise RuntimeError('Code/config/data changed since this M1 experiment; archive its outputs before rerunning')
+            raise RuntimeError(f"Code/config/data changed since this {c['name']} experiment; archive its outputs before rerunning")
         atomic_json(path, {'signature': signature(identity), 'identity': identity})
         (R['results'] / 'environment.txt').write_text('\n'.join(f"{d.metadata['Name']}=={d.version}" for d in sorted(distributions(), key=lambda d: d.metadata['Name'].lower())) + '\n')
         status = lambda phase, job=None: atomic_json(R['results'] / 'running-status.json', {'phase': phase, 'job': job, 'updated_utc': datetime.now(timezone.utc).isoformat(), 'smoke': a.smoke})
@@ -60,7 +61,12 @@ def main():
                     except BaseException:
                         proc.terminate(); proc.wait(); raise
                 if code: raise RuntimeError(f'{kind} {run} {step} failed (exit {code}); see {log}')
-                if kind == 'eval': report(c, a.smoke)
+                if kind == 'eval':
+                    adapter = R['artifacts'] / run / f'step-{step}'
+                    # Storage policy: intermediate adapters are deleted once evaluated (hash kept in train/eval markers).
+                    if run != 'base' and step != eval_steps(c, a.smoke)[-1] and not c['storage'].get('keep_intermediate_adapters', True) and adapter.exists():
+                        shutil.rmtree(adapter)
+                    report(c, a.smoke)
             status('complete')
         except BaseException as error:
             status('interrupted_or_failed', str(error)); raise

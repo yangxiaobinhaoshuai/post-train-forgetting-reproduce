@@ -3,9 +3,10 @@ import sys
 import unittest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'scripts'))
 from common import ROOT
-from m1_common import encode, load_config, macro_f1, paired_bootstrap, replay_slots, stage_order, stratified_buffer, eval_steps
+from m1_common import chain, encode, load_config, macro_f1, paired_bootstrap, replay_slots, stage_order, stratified_buffer, task_buffer, eval_steps
 
 C = load_config(ROOT / 'configs/m1.json')
+C2 = load_config(ROOT / 'configs/m2.json')
 
 
 class M1Tests(unittest.TestCase):
@@ -30,6 +31,15 @@ class M1Tests(unittest.TestCase):
         rows = [{'label': i % 4, 'source_id': i} for i in range(5000)]
         b = stratified_buffer(rows, 500, 42)
         self.assertEqual([sum(r['label'] == k for r in b) for k in range(4)], [125] * 4)
+
+    def test_multitask_buffer_is_even_over_tasks_and_classes(self):
+        rows = {'ag': [{'label': i % 4, 'source_id': i} for i in range(400)], 'dbpedia': [{'label': i % 14, 'source_id': i} for i in range(1400)]}
+        b = task_buffer(rows, 500, 42)
+        self.assertEqual(sum(r['task'] == 'ag' for r in b), 250)
+        self.assertEqual(sorted({sum(r['task'] == 'dbpedia' and r['label'] == k for r in b) for k in range(14)}), [17, 18])
+
+    def test_chain_follows_init(self):
+        self.assertEqual(chain(C2, 'ABC_replay10'), ['A', 'AB_replay10', 'ABC_replay10'])
 
     def test_macro_f1_counts_invalid_as_error(self):
         self.assertEqual(macro_f1([0, 1], [0, 1], 2), 1.0)

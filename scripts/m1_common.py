@@ -1,14 +1,29 @@
-"""M1：A→B 顺序 SFT pilot 的提示、编码、replay 排程与指标。"""
+"""M1/M2 顺序 SFT 共用：提示、编码、replay 排程与指标。"""
 import math
 import random
 import shutil
 from common import ROOT, chat, read_json
 from stage2_common import atomic_json, digest, signature  # noqa: F401  (re-exported)
 
-def roots(smoke=False):
+def roots(c, smoke=False):
     """Data is shared (smoke reads a prefix); outputs are isolated for smoke runs."""
-    name = 'm1-smoke' if smoke else 'm1'
-    return {'data': ROOT / 'data/m1', **{k: ROOT / k / name for k in ['artifacts', 'results', 'reports']}}
+    name = c['name'] + ('-smoke' if smoke else '')
+    return {'data': ROOT / 'data' / c['name'], **{k: ROOT / k / name for k in ['artifacts', 'results', 'reports']}}
+
+
+def labels_of(c, task):
+    return c['tasks'][task]['labels']
+
+
+def chain(c, run_id):
+    """Run ids from the first stage to run_id, following init links."""
+    by_id = {r['id']: r for r in c['runs']}; out = [run_id]
+    while by_id[out[0]]['init'] != 'base': out.insert(0, by_id[out[0]]['init'])
+    return out
+
+
+def buffer_name(run):
+    return 'replay_' + '+'.join(run['replay_tasks'])
 
 
 def load_config(path):
@@ -37,6 +52,9 @@ def prompt(task, row, labels):
     if task == 'dbpedia':
         return (f'Classify the entity described in the Wikipedia text. Reply with exactly one category: {options}.\n\n'
                 f"Title: {row['title']}\nText: {row['text']}")
+    if task == 'yahoo':
+        return (f'Classify the question by topic. Reply with exactly one category: {options}.\n\n'
+                f"Question: {row['title']}\nDetails: {row['text']}")
     raise ValueError(task)
 
 
@@ -71,6 +89,16 @@ def stage_order(new_rows, buffer_rows, total, fraction, seed):
         replay = replay[:n_replay]
     it_new, it_replay = iter(new), iter(replay)
     return [('replay', next(it_replay)) if s else ('new', next(it_new)) for s in slots]
+
+
+def task_buffer(rows_by_task, size, seed):
+    """Replay memory split evenly over seen tasks, stratified by class within each task; rows tagged with task."""
+    tasks = list(rows_by_task); out = []
+    for i, task in enumerate(tasks):
+        n = size // len(tasks) + (i < size % len(tasks))
+        out += [dict(r, task=task) for r in stratified_buffer(rows_by_task[task], n, seed)]
+    random.Random(seed).shuffle(out)
+    return out
 
 
 def stratified_buffer(rows, size, seed):

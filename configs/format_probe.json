@@ -1,0 +1,33 @@
+{
+  "name": "format_probe",
+  "seed": 42,
+  "eval_data": "data/stage2/eval_full.json",
+  "models": {
+    "base": "artifacts/base",
+    "collapsed": "artifacts/stage1/checkpoint-50",
+    "recover512": "artifacts/stage2/recover512/final",
+    "base_math512": "artifacts/format_probe/base_math512"
+  },
+  "retrain_base_math512": {
+    "note": "原 base_math512 权重已删除；按 configs/stage2.json 的 recovery 配方从底座重训，作为同配方对照",
+    "train_data": "data/stage2/gsm_train_512.json",
+    "max_steps": 32,
+    "max_length": 1024,
+    "learning_rate": 2e-05,
+    "warmup_steps": 0,
+    "micro_batch_size": 2,
+    "gradient_accumulation_steps": 8,
+    "weight_decay": 0.01,
+    "max_grad_norm": 1.0,
+    "lr_scheduler": "constant_with_warmup",
+    "optimizer": "adamw_torch"
+  },
+  "formats": {
+    "hash": "{q}\nSolve step by step and end with: #### <answer>.",
+    "boxed": "{q}\nPlease reason step by step, and put your final answer within \\boxed{{}}.",
+    "answer_is": "{q}\nWork it out, then end your reply with the sentence: The answer is <number>.",
+    "plain": "{q}",
+    "direct": "{q}\nReply with only the final number. Do not show any work."
+  },
+  "generation": {"batch_size": 16, "max_new_tokens": 512, "max_context_length": 2048}
+}
