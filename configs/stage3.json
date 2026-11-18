@@ -1,0 +1,35 @@
+{
+  "name": "stage3",
+  "seed": 42,
+  "eval_config": "configs/stage2.json",
+  "models": {"base": "artifacts/base", "collapsed": "artifacts/stage1/checkpoint-50"},
+  "eval_batch_size": 8,
+  "in_train_eval_batch_size": 2,
+  "direct_probe": {"full_n": 100, "quick_n": 40, "max_new_tokens": 64,
+    "suffix": "\nReply with only the final number. Do not show any work."},
+  "data": {
+    "general": {"dataset": "HuggingFaceH4/no_robots", "split": "train", "max_length": 1024, "recover_size": 512, "mix_pool_size": 1000,
+      "exclude_regex": "(?i)\\b(math|calculat|equation|solve|arithmetic|how many|percent|sum of|multipl|divid|probabilit|algebra|geometry)\\w*|\\d+\\s*[-+*/x×÷=]\\s*\\d+|%"},
+    "mmlu": {"dataset": "cais/mmlu", "subset": "auxiliary_train", "sizes": [32, 128]}
+  },
+  "recover_recipe": {"max_steps": 32, "learning_rate": 2e-05, "warmup_steps": 0, "max_length": 1024},
+  "mix_recipe": {"max_steps": 200, "learning_rate": 0.0001, "warmup_steps": 30, "max_length": 512,
+    "quick_eval_steps": [10, 20, 30, 50, 100, 200], "full_eval_steps": [200]},
+  "training": {"micro_batch_size": 2, "gradient_accumulation_steps": 8, "weight_decay": 0.01, "max_grad_norm": 1.0,
+    "lr_scheduler": "constant_with_warmup", "optimizer": "adamw_torch"},
+  "experiments": {
+    "reference": ["base", "collapsed"],
+    "interpolation": [0.0, 0.1, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0],
+    "layer_groups": ["embed", "layers_0_6", "layers_7_13", "layers_14_20", "layers_21_27", "attn", "mlp", "norm"],
+    "recover": [
+      {"id": "collapsed_general512", "start": "collapsed", "data": "general"},
+      {"id": "base_general512", "start": "base", "data": "general"},
+      {"id": "collapsed_mmlu32", "start": "collapsed", "data": "mmlu", "size": 32},
+      {"id": "collapsed_mmlu128", "start": "collapsed", "data": "mmlu", "size": 128},
+      {"id": "base_mmlu128", "start": "base", "data": "mmlu", "size": 128},
+      {"id": "collapsed_self", "start": "collapsed", "data": "self"},
+      {"id": "base_self", "start": "base", "data": "self"}
+    ],
+    "mix": [{"id": "mix0", "fraction": 0.0}, {"id": "mix10", "fraction": 0.1}]
+  }
+}

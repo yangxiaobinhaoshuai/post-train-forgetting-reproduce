@@ -55,6 +55,7 @@ uv run bash scripts/run_m1.sh --smoke     # 每阶段 2 步、每划分 4 条，
 uv run bash scripts/run_m1.sh             # 正式运行；汇总在 reports/m1/SUMMARY.md
 uv run bash scripts/run_m1.sh --config configs/m2.json   # M2 pilot：A→B→C
 uv run python scripts/format_probe.py                   # 格式 vs 能力探针
+uv run python scripts/stage3.py                         # Stage3 直觉实验队列
 ```
 
 ## 查看结果
@@ -73,6 +74,6 @@ Stage1 使用 AG News 8000 条训练；GSM8K 200、AG News 400、MMLU 300 和 10
 
 ## 文档与目录
 
-[Stage1 方案](docs/STAGE1.md) · [Stage2 方案](docs/STAGE2.md) · [M1 方案](docs/M1.md) · [M2 pilot](docs/M2.md) · [格式探针](docs/FORMAT_PROBE.md) · [机器检查](docs/MACHINE.md) · [后续框架](docs/PROPOSAL.md)
+[Stage1 方案](docs/STAGE1.md) · [Stage2 方案](docs/STAGE2.md) · [M1 方案](docs/M1.md) · [M2 pilot](docs/M2.md) · [格式探针](docs/FORMAT_PROBE.md) · [Stage3 直觉实验](docs/STAGE3.md) · [机器检查](docs/MACHINE.md) · [后续框架](docs/PROPOSAL.md)
 
 `configs/` 固定参数，`scripts/` 执行入口，`tests/` 检查 mask、数据隔离和状态恢复，`data/` 固定抽样，`artifacts/` 模型，`results/` 原始结果，`reports/` 汇总报告。
