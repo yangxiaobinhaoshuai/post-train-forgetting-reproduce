@@ -1,0 +1,29 @@
+{
+  "name": "stage4",
+  "seed": 42,
+  "models": {"base": "artifacts/base"},
+  "eval_config": "configs/stage2.json",
+  "eval_batch_size": 8,
+  "direct_probe": {"full_n": 100, "quick_n": 40, "max_new_tokens": 64,
+    "suffix": "\nReply with only the final number. Do not show any work."},
+  "train_data": "data/stage1/train.json",
+  "training": {
+    "steps": 200, "prompts_per_step": 16, "group_size": 8, "micro_batch_size": 16,
+    "warmup_steps": 30, "weight_decay": 0.01, "max_grad_norm": 1.0, "max_prompt_tokens": 480,
+    "rollout": {"temperature": 1.0, "top_p": 1.0, "top_k": 0, "repetition_penalty": 1.0, "max_new_tokens": 16}
+  },
+  "probes": {
+    "eval_steps": [10, 25, 50, 100, 200],
+    "kl": {"ag_prompts": 64, "ag_max_new_tokens": 16, "gsm_prompts": 32, "gsm_max_new_tokens": 64},
+    "passk": {"questions": 50, "k": 8, "temperature": 0.7, "max_new_tokens": 512, "questions_per_batch": 8}
+  },
+  "arms": [
+    {"id": "sft_gold_lr1e4", "method": "sft_gold", "lr": 0.0001},
+    {"id": "grpo_lr1e4", "method": "grpo", "lr": 0.0001, "beta": 0.0},
+    {"id": "sft_self_lr1e4", "method": "sft_self", "lr": 0.0001},
+    {"id": "sft_gold_lr1e5", "method": "sft_gold", "lr": 1e-05},
+    {"id": "grpo_lr1e5", "method": "grpo", "lr": 1e-05, "beta": 0.0},
+    {"id": "rft_lr1e5", "method": "rft", "lr": 1e-05},
+    {"id": "grpo_kl_lr1e5", "method": "grpo", "lr": 1e-05, "beta": 0.05}
+  ]
+}
