@@ -1,0 +1,42 @@
+{
+  "name": "stage5",
+  "seed": 42,
+  "models": {"base": "artifacts/base"},
+  "eval_config": "configs/stage2.json",
+  "eval_batch_size": 8,
+  "direct_probe": {"full_n": 100, "quick_n": 40, "max_new_tokens": 64,
+    "suffix": "\nReply with only the final number. Do not show any work."},
+  "probes": {
+    "eval_steps": [10, 25, 50, 100, 200],
+    "kl": {"ag_prompts": 64, "ag_max_new_tokens": 16, "gsm_prompts": 32, "gsm_max_new_tokens": 64},
+    "passk": {"questions": 50, "k": 8, "temperature": 0.7, "max_new_tokens": 512, "questions_per_batch": 8}
+  },
+  "gsm": {
+    "train_data": "data/stage2/gsm_train_512.json",
+    "n_rows_smoke": 4,
+    "eval_steps": [8, 16, 32, 64],
+    "training": {
+      "steps": 64, "prompts_per_step": 16, "group_size": 8, "micro_batch_size": 4, "rollout_prompts_per_call": 8,
+      "warmup_steps": 8, "weight_decay": 0.01, "max_grad_norm": 1.0,
+      "rollout": {"temperature": 1.0, "max_new_tokens": 512}
+    },
+    "arms": [
+      {"id": "sft_gold_lr2e5", "method": "sft_gold", "lr": 2e-05},
+      {"id": "sft_self_lr2e5", "method": "sft_self", "lr": 2e-05},
+      {"id": "rft_lr2e5", "method": "rft", "lr": 2e-05},
+      {"id": "grpo_lr2e5", "method": "grpo", "lr": 2e-05}
+    ]
+  },
+  "train_data": "data/stage1/train.json",
+  "training": {
+    "steps": 200, "prompts_per_step": 16, "group_size": 8, "micro_batch_size": 16,
+    "warmup_steps": 30, "weight_decay": 0.01, "max_grad_norm": 1.0, "max_prompt_tokens": 480,
+    "rollout": {"temperature": 1.0, "top_p": 1.0, "top_k": 0, "repetition_penalty": 1.0, "max_new_tokens": 16}
+  },
+  "arms": [
+    {"id": "sft_gold_lr3e5", "method": "sft_gold", "lr": 3e-05},
+    {"id": "sft_self_lr3e5", "method": "sft_self", "lr": 3e-05},
+    {"id": "grpo_lr3e5", "method": "grpo", "lr": 3e-05, "beta": 0.0},
+    {"id": "rft_lr3e5", "method": "rft", "lr": 3e-05}
+  ]
+}
